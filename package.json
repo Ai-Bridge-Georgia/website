@@ -11,13 +11,15 @@
     "dev": "npm run dev --workspace=apps/aibridgegeorgia",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "compile": "npx tsx packages/compiler/cli.ts"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "react": "^19.0.0",
+    "tsx": "^4.22.4",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",
     "zod": "^3.23.0"
