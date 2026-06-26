@@ -1,10 +1,10 @@
 -- ============================================================
--- Business OS — Universal Core DB Migration
+-- Business OS — Universal Core DB Migration v2
 -- 8 Core Tables + RLS (Supabase PostgreSQL)
 -- 헌법: "SECURITY BY DEFAULT", "Multi-tenant: RLS"
+-- 수정: agy 리뷰 반영 (RLS 무한루프/FK누락/auth연동/version)
 -- ============================================================
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================
@@ -27,20 +27,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
 
 -- ============================================================
 -- 2. users + tenant_users
+-- 수정: users.id 가 auth.users 를 참조하도록 변경
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT UNIQUE NOT NULL,
   name        TEXT,
   avatar_url  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- auth.users 에 새 사용자 생성 시 users 테이블에 자동 동기화
+CREATE OR REPLACE FUNCTION sync_auth_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO users (id, email, name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
+    NEW.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    avatar_url = EXCLUDED.avatar_url;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_sync_auth_user ON auth.users;
+CREATE TRIGGER trg_sync_auth_user
+  AFTER INSERT OR UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION sync_auth_user();
+
 CREATE TABLE IF NOT EXISTS tenant_users (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role_id     UUID,
+  role_id     UUID REFERENCES roles(id) ON DELETE SET NULL,
   status      TEXT NOT NULL DEFAULT 'active',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(tenant_id, user_id)
@@ -83,9 +108,11 @@ CREATE TABLE IF NOT EXISTS metadata (
 );
 
 CREATE INDEX IF NOT EXISTS idx_meta_tenant_entity ON metadata(tenant_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_meta_value_gin ON metadata USING GIN (value);
 
 -- ============================================================
 -- 5. events (이벤트 버스)
+-- 수정: version 필드 추가 (agy 권고)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS events (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -94,6 +121,7 @@ CREATE TABLE IF NOT EXISTS events (
   entity_type TEXT,
   entity_id   UUID,
   payload     JSONB,
+  version     TEXT NOT NULL DEFAULT '1.0',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -101,11 +129,12 @@ CREATE INDEX IF NOT EXISTS idx_events_tenant_type ON events(tenant_id, event_typ
 
 -- ============================================================
 -- 6. audit_logs (감사 로그)
+-- 수정: FK 추가 (agy 권고)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   UUID NOT NULL,
-  user_id     UUID,
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
   action      TEXT NOT NULL,
   resource    TEXT NOT NULL,
   resource_id UUID,
@@ -119,11 +148,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_logs(tenant_id, created_at 
 
 -- ============================================================
 -- 7. notifications (알림)
+-- 수정: FK 추가 (agy 권고)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS notifications (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   UUID NOT NULL,
-  user_id     UUID,
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
   type        TEXT NOT NULL,
   title       TEXT,
   body        TEXT,
@@ -148,14 +178,19 @@ CREATE TABLE IF NOT EXISTS configurations (
 );
 
 -- ============================================================
--- RLS: current_tenant_id() 함수
+-- RLS: current_tenant_id() — SECURITY DEFINER (agy 치명적 수정)
+-- 무한 루프 방지: RLS를 바이패스하려면 SECURITY DEFINER 필수
 -- ============================================================
 CREATE OR REPLACE FUNCTION current_tenant_id()
-RETURNS UUID AS $$
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
   SELECT tenant_id FROM tenant_users
   WHERE user_id = auth.uid() AND status = 'active'
   LIMIT 1;
-$$ LANGUAGE sql STABLE;
+$$;
 
 -- ============================================================
 -- RLS: 모든 테이블에 적용
@@ -205,4 +240,4 @@ CREATE TRIGGER trg_tenants_updated BEFORE UPDATE ON tenants
 CREATE TRIGGER trg_configs_updated BEFORE UPDATE ON configurations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 완료
+-- 완료 (v2 — agy 리뷰 반영)

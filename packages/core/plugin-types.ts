@@ -45,6 +45,10 @@ export interface ApiRequest {
   params?: Record<string, string>;
 }
 
+// --- Plugin 주의사항 (agy 권고) ---
+// 서버리스(Vercel) 환경에서는 메모리 싱글톤이 리셋됨.
+// Phase 2에서 Plugin Registry를 빌드타임 등록 또는 DB 기반으로 전환 예정.
+
 export interface ApiResponse {
   status: number;
   data?: unknown;

@@ -79,6 +79,7 @@ export interface DomainEvent {
   entityType?: string;
   entityId?: string;
   payload?: Record<string, unknown>;
+  version: string;           // agy 권고: 이벤트 스키마 버전
   createdAt: string;
 }
 
