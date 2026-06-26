@@ -8,7 +8,7 @@ import type { ComponentType } from 'react';
 
 // --- Plugin Definition ---
 export interface DomainPlugin {
-  id: string;                     // 'restaurant' | 'hotel' | 'saas'
+  id: string;                     // plugin ID
   name: string;
   version: string;
   industry: string;
@@ -16,7 +16,7 @@ export interface DomainPlugin {
 }
 
 export interface PluginModule {
-  id: string;                     // 'menu' | 'reservation' | 'orders'
+  id: string;                     // module ID
   name: string;
   routes?: RouteDefinition[];
   api?: ApiEndpoint[];
@@ -92,20 +92,3 @@ class PluginRegistry {
 }
 
 export const pluginRegistry = new PluginRegistry();
-
-// --- Example: Restaurant Plugin Registration ---
-// packages/plugins/restaurant/index.ts
-//
-// export const restaurantPlugin: DomainPlugin = {
-//   id: 'restaurant',
-//   name: 'Restaurant Module',
-//   version: '0.1.0',
-//   industry: 'restaurant',
-//   modules: [
-//     { id: 'menu', name: 'Menu Management', ... },
-//     { id: 'reservation', name: 'Reservation System', ... },
-//     { id: 'orders', name: 'Order Management', ... },
-//   ],
-// };
-//
-// pluginRegistry.register(restaurantPlugin);

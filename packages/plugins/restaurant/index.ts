@@ -1,95 +1,100 @@
 // ============================================================
-// Restaurant Plugin — 식당 도메인
-// 모듈: menu, reservation, orders, kitchen, reviews
+// Restaurant Plugin — Self Registration
+// Factory Core가 아닌 플러그인이 자기 엔티티를 등록
 // ============================================================
 
-import type { DomainPlugin, PluginModule, TableSchema } from '../../core/plugin-types';
+import type { PluginManifest, EntitySchemaMeta, FieldSchemaMeta } from '../../core/boundary';
+import { registerEntity } from '../../core/handler';
 
-// --- Schema: menus ---
-const menuSchema: TableSchema = {
+// --- Entity Schema Metadata ---
+const menuFields: FieldSchemaMeta[] = [
+  { name: 'category', type: 'text' },
+  { name: 'name', type: 'text' },
+  { name: 'description', type: 'text', nullable: true },
+  { name: 'price', type: 'numeric' },
+  { name: 'image_url', type: 'text', nullable: true },
+  { name: 'is_available', type: 'boolean', default: 'true' },
+  { name: 'sort_order', type: 'numeric', default: '0' },
+  { name: 'metadata', type: 'jsonb', nullable: true },
+];
+
+const reservationFields: FieldSchemaMeta[] = [
+  { name: 'customer_name', type: 'text' },
+  { name: 'customer_phone', type: 'text', nullable: true },
+  { name: 'customer_email', type: 'text', nullable: true },
+  { name: 'date', type: 'timestamptz' },
+  { name: 'party_size', type: 'numeric', default: '1' },
+  { name: 'status', type: 'text', default: "'pending'" },
+  { name: 'notes', type: 'text', nullable: true },
+];
+
+const orderFields: FieldSchemaMeta[] = [
+  { name: 'order_type', type: 'text', default: "'dine_in'" },
+  { name: 'status', type: 'text', default: "'pending'" },
+  { name: 'total', type: 'numeric', default: '0' },
+  { name: 'items', type: 'jsonb', default: "'[]'" },
+  { name: 'customer_info', type: 'jsonb', nullable: true },
+];
+
+// --- Entity Definitions ---
+const menusEntity: EntitySchemaMeta = {
   name: 'menus',
-  columns: [
-    { name: 'id', type: 'uuid', default: 'gen_random_uuid()' },
-    { name: 'tenant_id', type: 'uuid', references: 'tenants(id)' },
-    { name: 'category', type: 'text' },
-    { name: 'name', type: 'text' },
-    { name: 'description', type: 'text', nullable: true },
-    { name: 'price', type: 'numeric' },
-    { name: 'image_url', type: 'text', nullable: true },
-    { name: 'is_available', type: 'boolean', default: 'true' },
-    { name: 'sort_order', type: 'integer', default: '0' },
-    { name: 'metadata', type: 'jsonb', nullable: true },
-    { name: 'created_at', type: 'timestamptz', default: 'now()' },
-    { name: 'updated_at', type: 'timestamptz', default: 'now()' },
-  ],
+  table: 'menus',
+  label: '메뉴',
+  fields: menuFields,
+  defaultSort: { column: 'sort_order', ascending: true },
+  filterable: ['category', 'is_available'],
+  requiredFields: ['name', 'category', 'price'],
+  resource: 'menu',
 };
 
-// --- Schema: reservations ---
-const reservationSchema: TableSchema = {
+const reservationsEntity: EntitySchemaMeta = {
   name: 'reservations',
-  columns: [
-    { name: 'id', type: 'uuid', default: 'gen_random_uuid()' },
-    { name: 'tenant_id', type: 'uuid', references: 'tenants(id)' },
-    { name: 'customer_name', type: 'text' },
-    { name: 'customer_phone', type: 'text' },
-    { name: 'customer_email', type: 'text', nullable: true },
-    { name: 'date', type: 'timestamptz' },
-    { name: 'party_size', type: 'integer' },
-    { name: 'status', type: 'text', default: "'pending'" },
-    { name: 'notes', type: 'text', nullable: true },
-    { name: 'created_at', type: 'timestamptz', default: 'now()' },
-  ],
+  table: 'reservations',
+  label: '예약',
+  fields: reservationFields,
+  defaultSort: { column: 'date', ascending: false },
+  filterable: ['status', 'date'],
+  requiredFields: ['customer_name', 'date', 'party_size'],
+  resource: 'reservations',
+  workflowId: 'reservation',
 };
 
-// --- Schema: orders ---
-const orderSchema: TableSchema = {
+const ordersEntity: EntitySchemaMeta = {
   name: 'orders',
-  columns: [
-    { name: 'id', type: 'uuid', default: 'gen_random_uuid()' },
-    { name: 'tenant_id', type: 'uuid', references: 'tenants(id)' },
-    { name: 'order_type', type: 'text' },  // dine_in / delivery / takeaway
-    { name: 'status', type: 'text', default: "'pending'" },
-    { name: 'total', type: 'numeric' },
-    { name: 'items', type: 'jsonb' },      // [{ menu_id, qty, price }]
-    { name: 'customer_info', type: 'jsonb', nullable: true },
-    { name: 'created_at', type: 'timestamptz', default: 'now()' },
-  ],
+  table: 'orders',
+  label: '주문',
+  fields: orderFields,
+  defaultSort: { column: 'created_at', ascending: false },
+  filterable: ['status', 'order_type'],
+  requiredFields: ['items'],
+  resource: 'orders',
+  workflowId: 'order',
 };
 
-// --- Modules ---
-const menuModule: PluginModule = {
-  id: 'menu',
-  name: 'Menu Management',
-  schema: [menuSchema],
-};
+// --- Self Registration (import 시 자동 실행) ---
+registerEntity(menusEntity);
+registerEntity(reservationsEntity);
+registerEntity(ordersEntity);
 
-const reservationModule: PluginModule = {
-  id: 'reservation',
-  name: 'Reservation System',
-  schema: [reservationSchema],
-};
-
-const orderModule: PluginModule = {
-  id: 'orders',
-  name: 'Order Management',
-  schema: [orderSchema],
-};
-
-const kitchenModule: PluginModule = {
-  id: 'kitchen',
-  name: 'Kitchen Display',
-};
-
-const reviewModule: PluginModule = {
-  id: 'reviews',
-  name: 'Reviews & Ratings',
-};
-
-// --- Plugin ---
-export const restaurantPlugin: DomainPlugin = {
+// --- Plugin Manifest (Factory가 읽는 메타데이터) ---
+export const restaurantManifest: PluginManifest = {
   id: 'restaurant',
   name: 'Restaurant Module',
-  version: '0.1.0',
+  version: '0.2.0',
   industry: 'restaurant',
-  modules: [menuModule, reservationModule, orderModule, kitchenModule, reviewModule],
+  entities: [menusEntity, reservationsEntity, ordersEntity],
+  permissions: [
+    { role: 'admin', resource: 'menu', actions: ['read', 'create', 'update', 'delete'] },
+    { role: 'owner', resource: 'menu', actions: ['read', 'create', 'update'] },
+    { role: 'staff', resource: 'menu', actions: ['read'] },
+    { role: 'customer', resource: 'menu', actions: ['read'] },
+    { role: 'admin', resource: 'reservations', actions: ['read', 'create', 'update', 'delete'] },
+    { role: 'customer', resource: 'reservations', actions: ['read', 'create'] },
+    { role: 'admin', resource: 'orders', actions: ['read', 'create', 'update', 'delete'] },
+    { role: 'customer', resource: 'orders', actions: ['read', 'create'] },
+  ],
+  ruleIds: ['business-hours', 'min-order-amount', 'lunch-discount', 'max-party-size', 'late-night-surcharge'],
+  workflowIds: ['reservation', 'order'],
+  notificationRuleIds: ['order-created-slack', 'reservation-new-slack'],
 };

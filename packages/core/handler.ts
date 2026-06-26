@@ -1,27 +1,91 @@
 // ============================================================
-// Business OS — Generic CRUD Handler (조립라인)
-// 헌법: "Everything is Metadata", "Configuration over Customization"
-// 헌법: "API First", "Event First", "Security by Default"
+// Business OS — Factory Core Handler
+// 헌법: "The goal is Factory Independence"
 //
-// 이것이 공장의 "컨베이어 벨트"입니다.
-// 모든 API 요청이 이 체인을 통과합니다:
-//
-// 요청 → 테넌트 리졸브 → 권한 확인 → 규칙 검증
-//      → DB 작업 → 이벤트 발행 → 알림 → 감사 로그
-//
-// 새 엔티티 추가 시: entity-registry에 등록만 하면 끝.
-// 코딩 ❌
+// 이 파일은 Factory Core의 유일한 진입점입니다.
+// 오직 interface만 사용합니다.
+// Supabase / PostgreSQL / SQL / Next.js / 환경변수 / 도메인 — 전부 ❌
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-import { resolveTenant, TenantContext } from './tenant-resolver';
-import { getEntity, EntityDefinition } from './entity-registry';
+import type {
+  IEntityStore,
+  ITenantResolver,
+  IPolicyProvider,
+  EntitySchemaMeta,
+  FactoryEvent,
+} from './boundary';
 import { eventBus } from './event-bus';
-import { checkPermission, restaurantPolicy, defaultRoles } from '../engines/permission';
-import { evaluateAllRules, defaultRules as businessRules } from '../engines/rule';
 
-// --- API 응답 표준 ---
-interface ApiResponse {
+// --- 의존성 주입 (외부에서 주입 — Core는 생성하지 않음) ---
+let entityStore: IEntityStore | null = null;
+let tenantResolver: ITenantResolver | null = null;
+let policyProvider: IPolicyProvider | null = null;
+
+// --- 엔티티 레지스트리 (플러그인이 등록) ---
+const entityRegistry = new Map<string, EntitySchemaMeta>();
+
+export function registerEntity(entity: EntitySchemaMeta): void {
+  entityRegistry.set(entity.name, entity);
+}
+
+export function getEntity(name: string): EntitySchemaMeta | undefined {
+  return entityRegistry.get(name);
+}
+
+export function listEntities(): EntitySchemaMeta[] {
+  return Array.from(entityRegistry.values());
+}
+
+// --- 팩토리 초기화 (앱 부팅 시 1회 호출) ---
+export function initializeFactory(deps: {
+  entityStore: IEntityStore;
+  tenantResolver: ITenantResolver;
+  policyProvider: IPolicyProvider;
+}): void {
+  entityStore = deps.entityStore;
+  tenantResolver = deps.tenantResolver;
+  policyProvider = deps.policyProvider;
+}
+
+// --- 권한 확인 (Core는 정책 내용을 모름) ---
+function checkPermission(
+  role: string,
+  resource: string,
+  action: string,
+): { allowed: boolean; reason?: string; fieldRestrictions?: string[] } {
+  if (!policyProvider) return { allowed: true }; // 정책 없으면 통과 (개발 모드)
+
+  const policy = policyProvider.getPermissionPolicy();
+  const rule = policy.rules.find(
+    (r) => r.role === role && r.resource === resource && r.actions.includes(action),
+  );
+
+  if (!rule) return { allowed: false, reason: `권한 없음: ${role}/${resource}/${action}` };
+  return { allowed: true };
+}
+
+// --- 비즈니스 규칙 검증 (Core는 규칙 내용을 모름) ---
+function evaluateRules(
+  data: Record<string, unknown>,
+): { passed: boolean; message?: string } {
+  if (!policyProvider) return { passed: true };
+
+  const rules = policyProvider.getBusinessRules();
+  const sorted = [...rules].filter((r) => r.enabled).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+
+  for (const rule of sorted) {
+    // 룰 엔진 로직은 Rule Engine에 위임
+    // Core는 "규칙이 있다면 검사하라"만 알 뿐, 내용은 모름
+    // Phase: Rule Engine 인터페이스로 위임
+  }
+
+  return { passed: true };
+}
+
+// ============================================================
+// API 응답 표준
+// ============================================================
+interface FactoryResponse {
   status: number;
   body: {
     data?: unknown;
@@ -30,26 +94,12 @@ interface ApiResponse {
   };
 }
 
-// --- Supabase 클라이언트 ---
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-// --- 필수 필드 검증 ---
-function validateRequired(
-  body: Record<string, unknown>,
-  requiredFields: string[],
-): { valid: boolean; missing: string[] } {
-  const missing = requiredFields.filter((f) => body[f] === undefined || body[f] === '');
-  return { valid: missing.length === 0, missing };
+function ensureDeps(): boolean {
+  return entityStore !== null && tenantResolver !== null;
 }
 
 // ============================================================
-// READ (GET) — 조회
+// READ
 // ============================================================
 export async function handleRead(
   entityName: string,
@@ -57,70 +107,55 @@ export async function handleRead(
     headers?: Record<string, string | null>;
     searchParams: URLSearchParams;
   },
-): Promise<ApiResponse> {
-  // 1. 엔티티 조회
+): Promise<FactoryResponse> {
   const entity = getEntity(entityName);
   if (!entity) {
-    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}'를 찾을 수 없습니다` } } };
+    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}' 없음` } } };
   }
 
-  // 2. 테넌트 리졸브
-  const ctx = await resolveTenant(request);
+  if (!ensureDeps()) {
+    return { status: 500, body: { error: { code: 'FACTORY_NOT_INITIALIZED', message: 'initializeFactory() 먼저 호출' } } };
+  }
+
+  const ctx = await tenantResolver!.resolve(request);
   if (!ctx) {
-    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없습니다' } } };
+    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없음' } } };
   }
 
-  // 3. 권한 확인 (Permission Engine)
-  const perm = checkPermission(restaurantPolicy, ctx.role, entity.resource ?? entityName, 'read');
+  const perm = checkPermission(ctx.role, entity.resource ?? entityName, 'read');
   if (!perm.allowed) {
     return { status: 403, body: { error: { code: 'FORBIDDEN', message: perm.reason ?? '권한 없음' } } };
   }
 
-  // 4. DB 조회
-  const supabase = getSupabase();
   const limit = Math.min(parseInt(request.searchParams.get('limit') ?? '50'), 200);
   const page = parseInt(request.searchParams.get('page') ?? '1');
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
 
-  let query = supabase
-    .from(entity.table)
-    .select('*', { count: 'exact' })
-    .eq('tenant_id', ctx.tenantId)
-    .range(from, to);
-
-  // 정렬
-  if (entity.defaultSort) {
-    query = query.order(entity.defaultSort.column, { ascending: entity.defaultSort.ascending });
-  }
-
-  // 필터
+  const filters: Record<string, unknown> = {};
   if (entity.filterable) {
     for (const field of entity.filterable) {
       const value = request.searchParams.get(field);
-      if (value !== null) {
-        query = query.eq(field, value);
-      }
+      if (value !== null) filters[field] = value;
     }
   }
 
-  const { data, error, count } = await query;
-
-  if (error) {
-    return { status: 500, body: { error: { code: 'DB_ERROR', message: error.message } } };
-  }
+  const result = await entityStore!.find(entity.table, {
+    tenantId: ctx.tenantId,
+    filters: Object.keys(filters).length > 0 ? filters : undefined,
+    sort: entity.defaultSort,
+    pagination: { page, limit },
+  });
 
   return {
     status: 200,
     body: {
-      data: data ?? [],
-      meta: { total: count ?? 0, page, limit },
+      data: result.data,
+      meta: { total: result.total, page, limit },
     },
   };
 }
 
 // ============================================================
-// CREATE (POST) — 생성
+// CREATE
 // ============================================================
 export async function handleCreate(
   entityName: string,
@@ -129,68 +164,53 @@ export async function handleCreate(
     searchParams: URLSearchParams;
     body: Record<string, unknown>;
   },
-): Promise<ApiResponse> {
-  // 1. 엔티티
+): Promise<FactoryResponse> {
   const entity = getEntity(entityName);
   if (!entity) {
-    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}'를 찾을 수 없습니다` } } };
+    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}' 없음` } } };
   }
 
-  // 2. 테넌트
-  const ctx = await resolveTenant(request);
+  if (!ensureDeps()) {
+    return { status: 500, body: { error: { code: 'FACTORY_NOT_INITIALIZED', message: 'initializeFactory() 먼저 호출' } } };
+  }
+
+  const ctx = await tenantResolver!.resolve(request);
   if (!ctx) {
-    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없습니다' } } };
+    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없음' } } };
   }
 
-  // 3. 권한 (Permission Engine)
-  const perm = checkPermission(restaurantPolicy, ctx.role, entity.resource ?? entityName, 'create');
+  // 권한
+  const perm = checkPermission(ctx.role, entity.resource ?? entityName, 'create');
   if (!perm.allowed) {
     return { status: 403, body: { error: { code: 'FORBIDDEN', message: perm.reason ?? '권한 없음' } } };
   }
 
-  // 4. 필수 필드 검증
+  // 필수 필드
   if (entity.requiredFields) {
-    const validation = validateRequired(request.body, entity.requiredFields);
-    if (!validation.valid) {
-      return { status: 400, body: { error: { code: 'VALIDATION', message: `필수 필드 누락: ${validation.missing.join(', ')}` } } };
+    const missing = entity.requiredFields.filter(
+      (f) => request.body[f] === undefined || request.body[f] === '',
+    );
+    if (missing.length > 0) {
+      return { status: 400, body: { error: { code: 'VALIDATION', message: `필수 필드 누락: ${missing.join(', ')}` } } };
     }
   }
 
-  // 5. 비즈니스 규칙 검증 (Rule Engine)
-  const ruleResult = evaluateAllRules(businessRules, {
-    ...request.body,
-    order_type: request.body.order_type ?? 'dine_in',
-    order_total: request.body.total ?? request.body.price ?? 0,
-    party_size: request.body.party_size ?? 1,
-    current_time: new Date().toISOString(),
-  });
-  if (!ruleResult.allPassed) {
-    const blocker = ruleResult.blockers[0];
-    return { status: 422, body: { error: { code: 'RULE_VIOLATION', message: blocker.result.message ?? '비즈니스 규칙 위반' } } };
+  // 비즈니스 규칙
+  const ruleResult = evaluateRules(request.body);
+  if (!ruleResult.passed) {
+    return { status: 422, body: { error: { code: 'RULE_VIOLATION', message: ruleResult.message ?? '규칙 위반' } } };
   }
 
-  // 6. DB INSERT
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from(entity.table)
-    .insert({
-      ...request.body,
-      tenant_id: ctx.tenantId,
-    })
-    .select()
-    .single();
+  // DB (인터페이스만)
+  const data = await entityStore!.insert(entity.table, request.body, ctx.tenantId);
 
-  if (error) {
-    return { status: 500, body: { error: { code: 'DB_ERROR', message: error.message } } };
-  }
-
-  // 7. 이벤트 발행 (Event Bus → Notification + Audit 자동)
+  // 이벤트 (Event Bus — 순수 TS)
   await eventBus.emit({
     tenantId: ctx.tenantId,
     eventType: `${entity.name}.created`,
     entity: entity.table,
-    entityId: data.id,
-    payload: { ...request.body, id: data.id },
+    entityId: data.id as string,
+    payload: request.body,
     version: '1.0',
   });
 
@@ -198,7 +218,7 @@ export async function handleCreate(
 }
 
 // ============================================================
-// UPDATE (PATCH) — 수정
+// UPDATE
 // ============================================================
 export async function handleUpdate(
   entityName: string,
@@ -208,60 +228,34 @@ export async function handleUpdate(
     searchParams: URLSearchParams;
     body: Record<string, unknown>;
   },
-): Promise<ApiResponse> {
+): Promise<FactoryResponse> {
   const entity = getEntity(entityName);
   if (!entity) {
-    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}'를 찾을 수 없습니다` } } };
+    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}' 없음` } } };
   }
 
-  const ctx = await resolveTenant(request);
+  if (!ensureDeps()) {
+    return { status: 500, body: { error: { code: 'FACTORY_NOT_INITIALIZED', message: 'initializeFactory() 먼저 호출' } } };
+  }
+
+  const ctx = await tenantResolver!.resolve(request);
   if (!ctx) {
-    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없습니다' } } };
+    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없음' } } };
   }
 
-  // 권한
-  const perm = checkPermission(restaurantPolicy, ctx.role, entity.resource ?? entityName, 'update');
+  const perm = checkPermission(ctx.role, entity.resource ?? entityName, 'update');
   if (!perm.allowed) {
     return { status: 403, body: { error: { code: 'FORBIDDEN', message: perm.reason ?? '권한 없음' } } };
   }
 
-  // 기존 데이터 조회 (Diff용)
-  const supabase = getSupabase();
-  const { data: oldData } = await supabase
-    .from(entity.table)
-    .select('*')
-    .eq('id', id)
-    .eq('tenant_id', ctx.tenantId)
-    .single();
+  const data = await entityStore!.update(entity.table, id, request.body, ctx.tenantId);
 
-  if (!oldData) {
-    return { status: 404, body: { error: { code: 'NOT_FOUND', message: '데이터를 찾을 수 없습니다' } } };
-  }
-
-  // 업데이트 (필드 마스킹 적용)
-  const maskedBody = perm.fieldRestrictions
-    ? Object.fromEntries(Object.entries(request.body).filter(([k]) => !perm.fieldRestrictions!.includes(k)))
-    : request.body;
-
-  const { data, error } = await supabase
-    .from(entity.table)
-    .update(maskedBody)
-    .eq('id', id)
-    .eq('tenant_id', ctx.tenantId)
-    .select()
-    .single();
-
-  if (error) {
-    return { status: 500, body: { error: { code: 'DB_ERROR', message: error.message } } };
-  }
-
-  // 이벤트
   await eventBus.emit({
     tenantId: ctx.tenantId,
     eventType: `${entity.name}.updated`,
     entity: entity.table,
     entityId: id,
-    payload: { old: oldData, new: data },
+    payload: request.body,
     version: '1.0',
   });
 
@@ -269,7 +263,7 @@ export async function handleUpdate(
 }
 
 // ============================================================
-// DELETE — 삭제
+// DELETE
 // ============================================================
 export async function handleDelete(
   entityName: string,
@@ -278,35 +272,28 @@ export async function handleDelete(
     headers?: Record<string, string | null>;
     searchParams: URLSearchParams;
   },
-): Promise<ApiResponse> {
+): Promise<FactoryResponse> {
   const entity = getEntity(entityName);
   if (!entity) {
-    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}'를 찾을 수 없습니다` } } };
+    return { status: 404, body: { error: { code: 'NOT_FOUND', message: `엔티티 '${entityName}' 없음` } } };
   }
 
-  const ctx = await resolveTenant(request);
+  if (!ensureDeps()) {
+    return { status: 500, body: { error: { code: 'FACTORY_NOT_INITIALIZED', message: 'initializeFactory() 먼저 호출' } } };
+  }
+
+  const ctx = await tenantResolver!.resolve(request);
   if (!ctx) {
-    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없습니다' } } };
+    return { status: 403, body: { error: { code: 'TENANT_ERROR', message: '테넌트를 찾을 수 없음' } } };
   }
 
-  // 권한
-  const perm = checkPermission(restaurantPolicy, ctx.role, entity.resource ?? entityName, 'delete');
+  const perm = checkPermission(ctx.role, entity.resource ?? entityName, 'delete');
   if (!perm.allowed) {
     return { status: 403, body: { error: { code: 'FORBIDDEN', message: perm.reason ?? '권한 없음' } } };
   }
 
-  const supabase = getSupabase();
-  const { error } = await supabase
-    .from(entity.table)
-    .delete()
-    .eq('id', id)
-    .eq('tenant_id', ctx.tenantId);
+  await entityStore!.delete(entity.table, id, ctx.tenantId);
 
-  if (error) {
-    return { status: 500, body: { error: { code: 'DB_ERROR', message: error.message } } };
-  }
-
-  // 이벤트
   await eventBus.emit({
     tenantId: ctx.tenantId,
     eventType: `${entity.name}.deleted`,

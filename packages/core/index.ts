@@ -17,7 +17,7 @@ export interface Tenant {
   updatedAt: string;
 }
 
-export type Industry = 'restaurant' | 'hotel' | 'saas' | 'retail' | 'education' | 'healthcare';
+export type Industry = string; // 'restaurant' | 'hotel' | 'saas' — 도메인이 정의, Core는 모름
 
 export interface TenantSettings {
   languages: string[];

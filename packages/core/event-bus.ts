@@ -9,8 +9,8 @@
 export interface SystemEvent {
   id: string;
   tenantId: string;
-  eventType: string;               // 'order.created' | 'reservation.confirmed'
-  entity?: string;                 // 'orders' | 'reservations'
+  eventType: string;               // ''
+  entity?: string;
   entityId?: string;
   payload: Record<string, unknown>;
   timestamp: string;
@@ -130,53 +130,10 @@ class EventBusImpl {
 export const eventBus = new EventBusImpl();
 
 // ============================================================
-// 미리 정의된 이벤트 타입 (문서화)
-// ============================================================
-
-export const EVENT_TYPES = {
-  // 예약
-  RESERVATION_CREATED: 'reservation.created',
-  RESERVATION_CONFIRMED: 'reservation.confirmed',
-  RESERVATION_SEATED: 'reservation.seated',
-  RESERVATION_COMPLETED: 'reservation.completed',
-  RESERVATION_CANCELLED: 'reservation.cancelled',
-  RESERVATION_NO_SHOW: 'reservation.no_show',
-
-  // 주문
-  ORDER_CREATED: 'order.created',
-  ORDER_ACCEPTED: 'order.accepted',
-  ORDER_PREPARING: 'order.preparing',
-  ORDER_READY: 'order.ready',
-  ORDER_SERVED: 'order.served',
-  ORDER_CANCELLED: 'order.cancelled',
-
-  // 메뉴
-  MENU_CREATED: 'menu.created',
-  MENU_UPDATED: 'menu.updated',
-  MENU_DELETED: 'menu.deleted',
-
-  // 리뷰
-  REVIEW_CREATED: 'review.created',
-  REVIEW_REPLIED: 'review.replied',
-
-  // 분석
-  GOAL_ACHIEVED: 'analytics.goal_achieved',
-
-  // 시스템
-  USER_LOGIN: 'user.login',
-  USER_LOGOUT: 'user.logout',
-  CONFIG_CHANGED: 'config.changed',
-} as const;
-
-// ============================================================
-// 엔진 연결 — Event Bus를 통한 엔진 간 런타임 통신
+// 엔진 연결 — DI 패턴 (외부에서 주입)
 // ============================================================
 
 // (엔진 import 제거 — DI 패턴으로 외부에서 주입)
-
-// 엔진 연결은 런타임에 주입 (DI) — 순환 의존 방지
-// Phase B: event-bus.ts는 코어에 있으므로 엔진을 직접 import하지 않음
-// 대신, initializeEngineConnections() 함수에서 외부에서 연결
 
 export function initializeEngineConnections(deps: {
   notifyProcessEvents?: (event: { id: string; tenantId: string; eventType: string; payload: Record<string, unknown> }) => Promise<unknown>;
