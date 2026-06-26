@@ -10,7 +10,7 @@ import { tokens } from './tokens';
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps {
+export interface ButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   children: ReactNode;

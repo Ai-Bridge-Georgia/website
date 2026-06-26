@@ -158,6 +158,8 @@ export class AuditLogger {
     resource: string,
     options?: {
       userId?: string;
+      userEmail?: string;
+      userRole?: string;
       resourceId?: string;
       resourceName?: string;
       oldValue?: Record<string, unknown>;

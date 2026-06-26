@@ -31,7 +31,7 @@ const STYLE = {
     borderRadius: '8px',           // 사장님: 사각 둥근 모서리
     outline: 'none',
     transition: 'border-color 150ms ease',
-    boxSizing: 'border-box',
+  boxSizing: 'border-box' as const,
   },
   inputFocus: {
     borderColor: '#0A0A0A',
@@ -190,7 +190,7 @@ function renderField(
     <div key={field.name} style={{ width: WIDTH_MAP[field.width ?? 'full'] }}>
       {labelEl}
       {inputEl}
-      {field.hint && field.type !== 'checkbox' && <p style={STYLE.hint}>{field.hint}</p>}
+      {field.hint && <p style={STYLE.hint}>{field.hint}</p>}
       {error && <p style={STYLE.errorText}>{error}</p>}
     </div>
   );

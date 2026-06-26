@@ -1,6 +1,6 @@
 {
-  "name": "aibridgegeorgia-website",
-  "version": "1.0.0",
+  "name": "@aibg/app-aibridgegeorgia",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,11 +10,12 @@
   "dependencies": {
     "next": "^15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "^4.0.0",
-    "postcss": "^8.4.0"
+    "react-dom": "^19.0.0",
+    "@aibg/core": "*",
+    "@aibg/ui": "*",
+    "@aibg/config": "*",
+    "@aibg/engine-form": "*",
+    "@aibg/engine-dashboard": "*",
+    "@aibg/engine-search": "*"
   }
 }

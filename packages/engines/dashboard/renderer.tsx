@@ -266,7 +266,7 @@ function ListRender({ widget }: { widget: ListWidget }) {
                 </div>
               )}
             </div>
-            {tpl.badge && item[tpl.badge] && (
+            {tpl.badge && item[tpl.badge] ? (
               <span style={{
                 padding: '2px 8px', borderRadius: '8px',
                 fontSize: '12px', fontWeight: 600,
@@ -274,7 +274,7 @@ function ListRender({ widget }: { widget: ListWidget }) {
               }}>
                 {String(item[tpl.badge])}
               </span>
-            )}
+            ) : null}
           </div>
         ))}
       </div>

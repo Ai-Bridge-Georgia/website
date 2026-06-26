@@ -18,7 +18,7 @@ export const metadata = {
 // GA4 Measurement ID
 const GA4_ID = "G-VZXNECL2EM";
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
       <head>

@@ -108,7 +108,6 @@ export const menuExportSchema: ImportExportSchema = {
     { source: 'is_available', target: 'Available', transform: 'bool_to_yes_no' },
     { source: 'image_url', target: 'Image URL' },
   ],
-  format_old: 'csv' as any, // override
 };
 
 // --- Reservation Export (CSV) ---

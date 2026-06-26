@@ -256,23 +256,27 @@ export function SearchRenderer({ schema, primaryColor }: SearchRendererProps) {
           }}>
             {results.results.map((item, i) => {
               const card = schema.resultDisplay.card;
+              const img = item[card.image ?? ''] as string | undefined;
+              const badge = item[card.badge ?? ''] as string | undefined;
+              const title = String(item[card.title] ?? '');
+              const subtitle = card.subtitle ? String(item[card.subtitle] ?? '') : '';
               return (
                 <div key={i} style={STYLE.card}>
-                  {card.image && item[card.image] && (
+                  {img && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={String(item[card.image])}
-                      alt={String(item[card.title] ?? '')}
+                      src={img}
+                      alt={title}
                       style={STYLE.cardImage}
                     />
                   )}
                   <div style={STYLE.cardBody}>
-                    {card.badge && item[card.badge] && (
-                      <span style={STYLE.badge}>{String(item[card.badge])}</span>
+                    {badge && (
+                      <span style={STYLE.badge}>{badge}</span>
                     )}
-                    <div style={STYLE.cardTitle}>{String(item[card.title] ?? '')}</div>
-                    {card.subtitle && item[card.subtitle] && (
-                      <div style={STYLE.cardSubtitle}>{String(item[card.subtitle])}</div>
+                    <div style={STYLE.cardTitle}>{title}</div>
+                    {card.subtitle && subtitle && (
+                      <div style={STYLE.cardSubtitle}>{subtitle}</div>
                     )}
                     {card.price && item[card.price] !== undefined && (
                       <div style={STYLE.cardPrice}>

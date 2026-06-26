@@ -8,7 +8,7 @@ import { tokens } from './tokens';
 // 사장님 취향: 여백 96px+, Apple 톤, max-width 1200px
 // ============================================================
 
-interface SectionProps {
+export interface SectionProps {
   children: ReactNode;
   background?: string;
   maxWidth?: string;
@@ -36,7 +36,7 @@ export function Section({ children, background = 'transparent', maxWidth = token
 // Container — 기본 컨테이너
 // ============================================================
 
-interface ContainerProps {
+export interface ContainerProps {
   children: ReactNode;
   style?: CSSProperties;
 }
