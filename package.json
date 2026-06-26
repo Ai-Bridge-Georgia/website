@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "compile": "npx tsx packages/compiler/cli.ts",
     "validate": "npx tsx packages/validator/cli.ts",
-    "evolve": "npx tsx packages/evolution/cli.ts"
+    "evolve": "npx tsx packages/evolution/cli.ts",
+    "enforce": "npx tsx packages/enforcement/test.ts"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",
