@@ -1,13 +1,18 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
 // ============================================================
-// Business OS — API Route: Menus
-// 헌법: "API First", "SECURITY BY DEFAULT"
-// GET    /api/v1/menu          → 메뉴 목록 (tenant 격리)
-// POST   /api/v1/menu          → 메뉴 생성 (owner 이상)
-// PATCH  /api/v1/menu/:id      → 메뉴 수정
-// DELETE /api/v1/menu/:id      → 메뉴 삭제 (owner 이상)
+// GET /api/v1/menu → Supabase에서 실제 메뉴 조회
+// POST /api/v1/menu → 메뉴 생성
 // ============================================================
 
-import { NextRequest, NextResponse } from 'next/server';
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
 
 // --- GET: 메뉴 목록 ---
 export async function GET(request: NextRequest) {
@@ -15,19 +20,30 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category');
   const limit = parseInt(searchParams.get('limit') ?? '50');
 
-  // TODO Phase C: Supabase에서 조회
-  // const supabase = getApiClient(accessToken);
-  // const { data, error } = await supabase
-  //   .from('menus')
-  //   .select('*')
-  //   .eq('tenant_id', tenantId)
-  //   .order('sort_order')
-  //   .limit(limit);
+  const supabase = getSupabase();
+
+  let query = supabase
+    .from('menus')
+    .select('*')
+    .order('sort_order')
+    .limit(limit);
+
+  if (category) {
+    query = query.eq('category', category);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    return NextResponse.json(
+      { error: { code: 'DB_ERROR', message: error.message } },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
-    data: [],
-    meta: { total: 0, limit, category },
-    message: 'Menu API — DB 연결 대기 중 (Phase C)',
+    data: data ?? [],
+    meta: { total: count ?? data?.length ?? 0, limit, category },
   });
 }
 
@@ -35,15 +51,52 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
-  // TODO Phase C:
-  // 1. Permission Engine: checkPermission(policy, role, 'menu', 'create')
-  // 2. Rule Engine: validate menu data
-  // 3. Supabase INSERT
-  // 4. Audit Engine: createAuditEntry(...)
-  // 5. Event Bus: emit('menu.created')
+  // 필수 필드 검증
+  if (!body.name || !body.category || body.price === undefined) {
+    return NextResponse.json(
+      { error: { code: 'VALIDATION', message: 'name, category, price는 필수입니다' } },
+      { status: 400 },
+    );
+  }
 
-  return NextResponse.json({
-    data: { id: 'pending', ...body },
-    message: 'Menu created (Phase C에서 DB 연결)',
-  }, { status: 201 });
+  const supabase = getSupabase();
+
+  // TODO: tenant_id를 요청에서 추출 (Phase D: 인증 미들웨어)
+  // 임시: 첫 번째 테넌트 사용
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('slug', 'aibg')
+    .single();
+
+  if (!tenant) {
+    return NextResponse.json(
+      { error: { code: 'TENANT_NOT_FOUND', message: '테넌트를 찾을 수 없습니다' } },
+      { status: 404 },
+    );
+  }
+
+  const { data, error } = await supabase
+    .from('menus')
+    .insert({
+      tenant_id: tenant.id,
+      category: body.category,
+      name: body.name,
+      description: body.description ?? null,
+      price: body.price,
+      image_url: body.image_url ?? null,
+      is_available: body.is_available ?? true,
+      sort_order: body.sort_order ?? 999,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      { error: { code: 'DB_ERROR', message: error.message } },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ data }, { status: 201 });
 }
