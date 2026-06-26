@@ -61,21 +61,8 @@ CREATE TRIGGER trg_sync_auth_user
   AFTER INSERT OR UPDATE ON auth.users
   FOR EACH ROW EXECUTE FUNCTION sync_auth_user();
 
-CREATE TABLE IF NOT EXISTS tenant_users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role_id     UUID REFERENCES roles(id) ON DELETE SET NULL,
-  status      TEXT NOT NULL DEFAULT 'active',
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(tenant_id, user_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_tu_tenant ON tenant_users(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_tu_user ON tenant_users(user_id);
-
 -- ============================================================
--- 3. roles + permissions (RBAC)
+-- 3. roles + permissions (RBAC) — tenant_users보다 먼저
 -- ============================================================
 CREATE TABLE IF NOT EXISTS roles (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -92,6 +79,22 @@ CREATE TABLE IF NOT EXISTS permissions (
   action      TEXT NOT NULL,
   UNIQUE(role_id, resource, action)
 );
+
+-- ============================================================
+-- 2b. tenant_users (roles 이후)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tenant_users (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role_id     UUID REFERENCES roles(id) ON DELETE SET NULL,
+  status      TEXT NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tu_tenant ON tenant_users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tu_user ON tenant_users(user_id);
 
 -- ============================================================
 -- 4. metadata (동적 메타데이터)
