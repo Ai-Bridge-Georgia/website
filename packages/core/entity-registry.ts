@@ -104,6 +104,39 @@ registerEntity({
 });
 
 // ============================================================
+// Manufacturing Test — 3개 새 엔티티 (코딩 없이 추가)
+// ============================================================
+registerEntity({
+  name: 'customers',
+  table: 'customers',
+  label: '고객',
+  defaultSort: { column: 'created_at', ascending: false },
+  filterable: ['status', 'company'],
+  requiredFields: ['name'],
+  resource: 'customers',
+});
+
+registerEntity({
+  name: 'invoices',
+  table: 'invoices',
+  label: '청구서',
+  defaultSort: { column: 'created_at', ascending: false },
+  filterable: ['status', 'customer_id'],
+  requiredFields: ['invoice_number', 'amount'],
+  resource: 'billing',
+});
+
+registerEntity({
+  name: 'employees',
+  table: 'employees',
+  label: '직원',
+  defaultSort: { column: 'created_at', ascending: false },
+  filterable: ['department', 'status', 'position'],
+  requiredFields: ['name', 'position'],
+  resource: 'users',
+});
+
+// ============================================================
 // Universal Core 엔티티
 // ============================================================
 registerEntity({
