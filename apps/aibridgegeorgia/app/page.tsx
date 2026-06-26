@@ -1,47 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const NAV = [
-  { label: "회사 소개", href: "#about" },
-  { label: "서비스", href: "#services" },
-  { label: "팀", href: "#team" },
-  { label: "연락처", href: "#contact" },
-];
+// ============================================================
+// 홈페이지 — 한국 음식점 (조지아 현지인 대상)
+// 사장님 취향: Apple 톤, 여백 96px+, 사각 버튼 8-12px, Pretendard
+// ============================================================
 
-const SERVICES = [
-  {
-    title: "풀스택 개발",
-    desc: "Next.js, React, Supabase 기반 모던 웹사이트 & 웹앱 개발. 디자인부터 배포까지 한 번에.",
-    icon: "💻",
-  },
-  {
-    title: "광고 대행",
-    desc: "Google Ads, Meta Ads 캠페인 운영. GA4 데이터 기반 최적화로 ROI 극대화.",
-    icon: "📣",
-  },
-];
-
-const VALUES = [
-  { title: "Think Different", desc: "기존의 틀을 깨고 더 좋은 것을 만듭니다." },
-  { title: "Work Simple", desc: "복잡함을 덜어내고 단순하게 일합니다." },
-  { title: "Live Easier", desc: "고객의 삶을 더 편하게 만듭니다." },
-];
-
-const TEAM = [
-  { name: "Aiden", role: "영업", icon: "🤝" },
-  { name: "Pria", role: "프로젝트 관리", icon: "📋" },
-  { name: "Daria", role: "UI/UX 디자인", icon: "🎨" },
-  { name: "Felix", role: "프론트엔드", icon: "💻" },
-  { name: "Beck", role: "백엔드", icon: "🖥️" },
-  { name: "Ada", role: "광고 운영", icon: "📣" },
-  { name: "Cara", role: "콘텐츠", icon: "✍️" },
-  { name: "Ana", role: "분석", icon: "📊" },
-  { name: "Otto", role: "운영", icon: "⚙️" },
-];
+interface MenuItem { id: string; name: string; price: number; category: string; description: string | null; }
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [featured, setFeatured] = useState<MenuItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v1/menus?limit=3")
+      .then((r) => r.json())
+      .then((d) => setFeatured(d.data ?? []))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -49,150 +26,131 @@ export default function Home() {
       <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm border-b border-gray-100 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <a href="#" className="text-lg font-bold tracking-tight">
-              AI Bridge Georgia
-            </a>
+            <a href="/" className="text-lg font-bold tracking-tight">한국의 맛</a>
             <div className="hidden md:flex items-center gap-8">
-              {NAV.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="text-sm text-gray-600 hover:text-gray-900 transition"
-                >
-                  {item.label}
-                </a>
-              ))}
+              <a href="/menu" className="text-sm text-gray-600 hover:text-gray-900 transition">메뉴</a>
+              <a href="/reserve" className="text-sm text-gray-600 hover:text-gray-900 transition">예약</a>
+              <a href="#contact" className="text-sm text-gray-600 hover:text-gray-900 transition">연락처</a>
             </div>
-            <button
-              className="md:hidden p-2"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
+            <button className="md:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
+          {menuOpen && (
+            <div className="md:hidden pb-4 flex flex-col gap-3">
+              <a href="/menu" className="text-sm text-gray-600">메뉴</a>
+              <a href="/reserve" className="text-sm text-gray-600">예약</a>
+              <a href="#contact" className="text-sm text-gray-600">연락처</a>
+            </div>
+          )}
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="pt-32 pb-24 px-4 text-center">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-sm font-medium text-orange-500 mb-4 tracking-wide">AUTHENTIC KOREAN FOOD</p>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Bridging Korea and Georgia
-            <br />
-            <span className="text-gray-400">through AI</span>
+            한국의 맛,<br/>
+            <span className="text-gray-400">트빌리시에서</span>
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            풀스택 개발과 광고대행 전문. 다르게 생각하고, 단순하게 일하고, 고객의 삶을 편하게 만듭니다.
+          <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto">
+            정통 한국 요리를 조지아에 소개합니다. 신선한 재료, 정성껏 만든 음식, 합리적인 가격.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
-            >
-              문의하기
+            <a href="/menu" className="px-8 py-3.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
+              메뉴 보기
             </a>
-            <a
-              href="#services"
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition"
-            >
-              서비스 보기
+            <a href="/reserve" className="px-8 py-3.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition">
+              예약하기
             </a>
           </div>
         </div>
       </section>
 
-      {/* Slogan */}
-      <section className="py-12 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Do Better, Think More
-          </p>
-          <p className="text-gray-500">더 잘하자, 더 생각하자</p>
-        </div>
-      </section>
-
-      {/* About */}
-      <section id="about" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8">회사 소개</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {VALUES.map((v) => (
-              <div key={v.title} className="text-center">
-                <h3 className="text-xl font-semibold mb-2">{v.title}</h3>
-                <p className="text-gray-600">{v.desc}</p>
-              </div>
-            ))}
+      {/* Featured Menu */}
+      {featured.length > 0 && (
+        <section className="py-24 px-4 bg-gray-50">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl font-bold mb-2 text-center">인기 메뉴</h2>
+            <p className="text-gray-500 text-center mb-12">가장 사랑받는 한국 요리</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {featured.map((item) => (
+                <div key={item.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-gray-300 transition">
+                  <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center text-5xl">🍽️</div>
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-semibold text-lg">{item.name}</h3>
+                      <span className="font-bold">{item.price} ₾</span>
+                    </div>
+                    {item.description && <p className="text-sm text-gray-500">{item.description}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <a href="/menu" className="inline-block text-sm font-medium text-gray-900 border-b border-gray-300 pb-1 hover:border-gray-900 transition">
+                전체 메뉴 보기 →
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Services */}
-      <section id="services" className="py-20 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-8">서비스</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            {SERVICES.map((s) => (
-              <div key={s.title} className="bg-white rounded-xl p-8 border border-gray-100">
-                <div className="text-4xl mb-4">{s.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{s.title}</h3>
-                <p className="text-gray-600">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Team */}
-      <section id="team" className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Value Props */}
+      <section className="py-24 px-4">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-2">팀</h2>
-          <p className="text-gray-600 mb-8">9명의 AI 직원이 24/7 일합니다</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
-            {TEAM.map((member) => (
-              <div key={member.name} className="text-center p-6 rounded-xl border border-gray-100 hover:border-gray-300 transition">
-                <div className="text-3xl mb-2">{member.icon}</div>
-                <div className="font-semibold">{member.name}</div>
-                <div className="text-sm text-gray-500">{member.role}</div>
-              </div>
-            ))}
+          <div className="grid md:grid-cols-3 gap-12 text-center">
+            <div>
+              <div className="text-3xl mb-4">🌱</div>
+              <h3 className="font-semibold mb-2">신선한 재료</h3>
+              <p className="text-sm text-gray-500">매일 장보는 신선한 채소와 고기</p>
+            </div>
+            <div>
+              <div className="text-3xl mb-4">👨‍🍳</div>
+              <h3 className="font-semibold mb-2">정통 레시피</h3>
+              <p className="text-sm text-gray-500">한국에서 검증된 전통 요리 방식</p>
+            </div>
+            <div>
+              <div className="text-3xl mb-4">💰</div>
+              <h3 className="font-semibold mb-2">합리적인 가격</h3>
+              <p className="text-sm text-gray-500">부담 없이 즐기는 한국 음식</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Contact */}
       <section id="contact" className="py-20 bg-gray-900 text-white">
-        <div className="max-w-2xl mx-auto text-center px-4">
-          <h2 className="text-3xl font-bold mb-4">연락처</h2>
-          <p className="text-gray-400 mb-8">
-            프로젝트 문의, 협업 제안, 기타 문의사항을 남겨주세요.
-          </p>
-          <div className="flex flex-col gap-4 items-center">
-            <a
-              href="mailto:hello@aibridgegeorgia.tech"
-              className="text-lg font-medium hover:underline"
-            >
-              hello@aibridgegeorgia.tech
-            </a>
-            <a
-              href="https://github.com/Ai-Bridge-Georgia"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white transition"
-            >
-              github.com/Ai-Bridge-Georgia
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-2xl font-bold mb-4">영업 정보</h2>
+          <div className="grid sm:grid-cols-3 gap-8 mt-8">
+            <div>
+              <p className="text-gray-400 text-sm mb-1">주소</p>
+              <p className="font-medium">Tbilisi, Georgia</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm mb-1">영업시간</p>
+              <p className="font-medium">11:00 - 22:00 (매일)</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm mb-1">전화</p>
+              <p className="font-medium">+995 599 000 000</p>
+            </div>
+          </div>
+          <div className="mt-12">
+            <a href="/reserve" className="inline-block px-8 py-3.5 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition">
+              예약하기
             </a>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-gray-950 text-gray-500 text-sm">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p>© 2026 AI Bridge Georgia. All rights reserved.</p>
-          <p className="mt-1">Tbilisi, Georgia — aibridgegeorgia.tech</p>
-        </div>
+      <footer className="py-8 bg-gray-950 text-gray-500 text-sm text-center">
+        <p>© 2026 한국의 맛 — Tbilisi, Georgia</p>
       </footer>
     </div>
   );

@@ -26,5 +26,9 @@
     "turbo": "^2.0.0",
     "typescript": "^5.5.0",
     "zod": "^3.23.0"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "tailwindcss": "^4.3.1"
   }
 }
