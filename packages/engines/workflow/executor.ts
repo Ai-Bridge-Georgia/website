@@ -49,8 +49,16 @@ async function executeAction(
 
       case 'emit_event':
         // Event Bus 연동
-        // 실제 구현: Supabase events 테이블 INSERT
         console.log(`[Workflow] Event: ${action.eventType} for ${ctx.entityId}`);
+        // 실제 구현 (DI로 eventBus 주입 필요):
+        // await eventBus.emit({
+        //   tenantId: ctx.tenantId,
+        //   eventType: action.eventType,
+        //   entity: undefined,
+        //   entityId: ctx.entityId,
+        //   payload: action.payload ?? {},
+        //   version: '1.0',
+        // });
         return { success: true };
 
       case 'update_field':
