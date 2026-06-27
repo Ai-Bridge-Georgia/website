@@ -16,7 +16,8 @@
     "validate": "npx tsx packages/validator/cli.ts",
     "evolve": "npx tsx packages/evolution/cli.ts",
     "enforce": "npx tsx packages/enforcement/test.ts",
-    "design-compile": "npx tsx packages/design-compiler/cli.ts"
+    "design-compile": "npx tsx packages/design-compiler/cli.ts",
+    "review-ui": "npx tsx packages/ui-pipeline/cli.ts"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",
