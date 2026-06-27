@@ -8,6 +8,7 @@ import type { GeneratedFile, ProjectManifest, ScreenSpec } from '../interface';
 import type { PlatformAdapter } from '../../platform-adapters/interface';
 import { getArchetypeProfile } from '../../design-learning/archetypes';
 import { resolveBrand, brandToCssVars } from '../../design-learning/brand-identity';
+import { resolveExperience } from '../../design-learning/experience-language';
 
 export const webProjectGenerator: ProjectGenerator = {
   platform: 'web',
@@ -175,9 +176,15 @@ function generateScreen(screen: ScreenSpec, manifest: ProjectManifest, adapter: 
 
 function generateLanding(screen: ScreenSpec, manifest: ProjectManifest): GeneratedFile {
   const arch = getArchetypeProfile(manifest.industry);
-  const ctaVerb = arch.ctaVerb;
+  const exp = resolveExperience((manifest as any).brandKey ?? 'premium-korean');
+  const ctaVerb = exp.microCopy.ctaPrimary;
+  const ctaSecondary = exp.microCopy.ctaSecondary;
   const listScreen = manifest.screens.find(s => s.type === 'list');
   const formScreen = manifest.screens.find(s => s.type === 'form');
+  const heroHeadline = exp.story.heroHeadline;
+  const heroSubtitle = exp.story.heroSubtitle;
+  const valueProps = exp.story.valueProps;
+  const footer = exp.microCopy.footer;
   const content = `"use client";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
@@ -194,8 +201,15 @@ export default function ${capitalize(screen.name)}Page() {
           <a href="/${formScreen?.name ?? 'reserve'}" className="px-8 py-3.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition min-h-[44px] flex items-center">${ctaVerb}</a>
         </div>
       </header>
+      <section className="py-24 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-12 text-center">
+            ${valueProps.map((v: string, i: number) => `<div><h3 className="font-semibold mb-2">${v}</h3></div>`).join('\n            ')}
+          </div>
+        </div>
+      </section>
       <footer className="py-8 bg-gray-50 text-center text-sm text-gray-400">
-        <p>© 2026 ${manifest.displayName}</p>
+        <p>${footer}</p>
       </footer>
     </div>
   );
@@ -206,8 +220,13 @@ export default function ${capitalize(screen.name)}Page() {
 
 function generateListScreen(screen: ScreenSpec, manifest: ProjectManifest, _adapter: PlatformAdapter): GeneratedFile {
   const arch = getArchetypeProfile(manifest.industry);
+  const exp = resolveExperience((manifest as any).brandKey ?? 'premium-korean');
   const placeholderIcon = arch.placeholderIcon;
   const currencySymbol = arch.currencyDisplay === 'none' ? '' : (manifest.brand.language === 'ka' ? '₾' : '');
+  const emptyMsg = exp.microCopy.empty;
+  const loadingMsg = exp.microCopy.loading;
+  const placeholder = exp.microCopy.placeholder;
+  const successMsg = exp.microCopy.success;
   const endpoint = screen.apiEndpoint ?? `/api/v1/${screen.name}`;
   const content = `"use client";
 import { Navigation } from "@/components/Navigation";
@@ -236,7 +255,7 @@ export default function ${capitalize(screen.name)}Page() {
         <h1 className="text-3xl font-bold mb-2 text-center">${screen.title}</h1>
         <p className="text-gray-500 text-center mb-8"></p>
         <div className="max-w-md mx-auto mb-8">
-          <input type="text" placeholder="검색..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder="${placeholder}"value={search} onChange={e => setSearch(e.target.value)}
             className="w-full px-4 py-3 pl-10 border border-gray-200 rounded-lg outline-none focus:border-gray-900 min-h-[48px]" />
         </div>
         {loading ? (
@@ -244,7 +263,7 @@ export default function ${capitalize(screen.name)}Page() {
             {[1,2,3].map(i => <div key={i} className="rounded-xl border border-gray-100 overflow-hidden"><div className="aspect-[4/3] bg-gray-100 animate-pulse" /><div className="p-5"><div className="h-5 bg-gray-100 rounded animate-pulse w-2/3 mb-2" /><div className="h-4 bg-gray-100 rounded animate-pulse w-1/3" /></div></div>)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20"><div className="text-5xl mb-4">🔍</div><h3 className="text-xl font-semibold mb-2">결과가 없습니다</h3><button onClick={() => setSearch("")} className="px-5 py-2.5 border border-gray-200 rounded-lg text-sm">초기화</button></div>
+          <div className="text-center py-20"><div className="text-5xl mb-4">🔍</div><h3 className="text-xl font-semibold mb-2">${emptyMsg}</h3><button onClick={() => setSearch("")} className="px-5 py-2.5 border border-gray-200 rounded-lg text-sm">초기화</button></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((item: any) => (
@@ -270,6 +289,10 @@ export default function ${capitalize(screen.name)}Page() {
 }
 
 function generateFormScreen(screen: ScreenSpec, manifest: ProjectManifest): GeneratedFile {
+  const exp = resolveExperience((manifest as any).brandKey ?? 'premium-korean');
+  const successMsg = exp.microCopy.success;
+  const errorMsg = exp.microCopy.error;
+  const confirmLabel = exp.microCopy.ctaPrimary;
   const endpoint = screen.apiEndpoint ?? `/api/v1/${screen.name}`;
   const fields = screen.fields ?? [
     { name: 'customer_name', label: '이름', type: 'text' as const, required: true },
@@ -319,7 +342,7 @@ export default function ${capitalize(screen.name)}Page() {
       <main className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <div className="text-5xl mb-6">✅</div>
-          <h1 className="text-2xl font-bold mb-3">완료!</h1>
+          <h1 className="text-2xl font-bold mb-3">${successMsg}</h1>
           <button onClick={() => setStatus("idle")} className="px-6 py-3 bg-gray-900 text-white rounded-lg min-h-[44px]">다시</button>
         </div>
       </main>
@@ -340,7 +363,7 @@ export default function ${capitalize(screen.name)}Page() {
 ${fieldHtml}
           <button type="submit" disabled={status === "submitting"}
             className="w-full py-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 min-h-[48px]">
-            {status === "submitting" ? "처리 중..." : "${screen.title}"}
+            {status === "submitting" ? "처리 중..." : "${confirmLabel}"}
           </button>
         </form>
       </main>
