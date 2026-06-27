@@ -247,7 +247,7 @@ function checkResponsive(code: string): CategoryScore {
   return { name: 'Responsive', score: Math.max(0, score), weight: 0.05, issues };
 }
 
-// 13. UX (8%)
+// 13. UX (5% — weight reduced for extended categories)
 function checkUX(code: string): CategoryScore {
   const issues: Issue[] = [];
   let score = 100;
@@ -259,7 +259,110 @@ function checkUX(code: string): CategoryScore {
   if (!hasErrorHandling) { issues.push({ type: 'missing-error-handling', severity: 'warning', detail: '에러 처리 로직 없음' }); score -= 15; }
   if (!hasSubmitState) { issues.push({ type: 'missing-submit-state', severity: 'info', detail: '제출 중 상태 처리 없음' }); score -= 10; }
 
-  return { name: 'UX', score: Math.max(0, score), weight: 0.08, issues };
+  return { name: 'UX', score: Math.max(0, score), weight: 0.05, issues };
+}
+
+// 14. Information Architecture (3%) — NEW
+function checkInformationArchitecture(code: string): CategoryScore {
+  const issues: Issue[] = [];
+  let score = 100;
+
+  const hasNav = /<nav|className="[^"]*nav/.test(code);
+  const hasFooter = /<footer|className="[^"]*footer/.test(code);
+  const hasMain = /<main|className="[^"]*main/.test(code);
+  const sectionCount = (code.match(/<section/g) || []).length;
+
+  if (!hasNav) { issues.push({ type: 'missing-nav', severity: 'warning', detail: '네비게이션 구조 없음' }); score -= 15; }
+  if (!hasFooter) { issues.push({ type: 'missing-footer', severity: 'info', detail: '푸터 없음' }); score -= 5; }
+  if (sectionCount < 2) { issues.push({ type: 'low-section-count', severity: 'warning', detail: '섹션 분할 부족 (2개 미만)' }); score -= 15; }
+
+  return { name: 'Information Architecture', score: Math.max(0, score), weight: 0.03, issues };
+}
+
+// 15. UX Flow (3%) — NEW
+function checkUXFlow(code: string): CategoryScore {
+  const issues: Issue[] = [];
+  let score = 100;
+
+  const hasCTA = /href.*reserve|href.*menu|href.*contact|예약|문의|시작/.test(code);
+  const hasBackLink = /뒤로|back|←|홈으로/.test(code);
+  const hasSuccessState = /success|완료|complete|✅/.test(code);
+
+  if (!hasCTA) { issues.push({ type: 'missing-cta', severity: 'warning', detail: '명확한 CTA(다음 액션) 없음' }); score -= 20; }
+  if (!hasBackLink) { issues.push({ type: 'missing-back', severity: 'info', detail: '뒤로/홈 링크 없음' }); score -= 5; }
+
+  return { name: 'UX Flow', score: Math.max(0, score), weight: 0.03, issues };
+}
+
+// 16. Pattern Consistency (3%) — NEW
+function checkPatternConsistency(code: string): CategoryScore {
+  const issues: Issue[] = [];
+  let score = 100;
+
+  const cardCount = (code.match(/rounded-(?:xl|lg|12)/g) || []).length;
+  const buttonCount = (code.match(/rounded-(?:md|lg|8)/g) || []).length;
+  const hasGridPattern = /grid-cols-\d/.test(code);
+
+  if (cardCount > 0 && buttonCount > 0) {
+    // 카드와 버튼이 서로 다른 radius를 사용하는지
+    const cardRadii = new Set(code.match(/rounded-(?:xl|lg|12)/g) || []);
+    const btnRadii = new Set(code.match(/rounded-(?:md|8)/g) || []);
+    // 의도적 차이 = 좋음 (카드 12px, 버튼 8px)
+  }
+
+  if (!hasGridPattern && cardCount > 2) {
+    issues.push({ type: 'cards-without-grid', severity: 'info', detail: '카드가 그리드 없이 배치됨' });
+    score -= 10;
+  }
+
+  return { name: 'Pattern Consistency', score: Math.max(0, score), weight: 0.03, issues };
+}
+
+// 17. Content Density (3%) — NEW
+function checkContentDensity(code: string): CategoryScore {
+  const issues: Issue[] = [];
+  let score = 100;
+
+  // 너무 많은 텍스트 블록
+  const textBlocks = (code.match(/<p|<span|className="[^"]*text-/g) || []).length;
+  const codeLength = code.length;
+
+  // 500줄 이상 한 페이지 = 밀도 과다
+  const lineCount = code.split('\n').length;
+  if (lineCount > 500) {
+    issues.push({ type: 'high-density', severity: 'warning', detail: `${lineCount}줄 — 단일 페이지 밀도 과다` });
+    score -= 15;
+  }
+
+  // 너무 적은 콘텐츠
+  if (textBlocks < 5) {
+    issues.push({ type: 'low-content', severity: 'info', detail: '콘텐츠 요소 5개 미만 — 빈 페이지 위험' });
+    score -= 10;
+  }
+
+  return { name: 'Content Density', score: Math.max(0, score), weight: 0.03, issues };
+}
+
+// 18. Cognitive Load (3%) — NEW
+function checkCognitiveLoad(code: string): CategoryScore {
+  const issues: Issue[] = [];
+  let score = 100;
+
+  // 한 페이지에 너무 많은 버튼
+  const buttonCount = (code.match(/<button/g) || []).length;
+  if (buttonCount > 8) {
+    issues.push({ type: 'too-many-buttons', severity: 'warning', detail: `버튼 ${buttonCount}개 — 인지 부하 위험 (8개 이하 권장)` });
+    score -= 15;
+  }
+
+  // 너무 많은 입력 필드
+  const inputCount = (code.match(/<input|<select|<textarea/g) || []).length;
+  if (inputCount > 6) {
+    issues.push({ type: 'too-many-inputs', severity: 'warning', detail: `입력 필드 ${inputCount}개 — 폼 분할 권장 (6개 이하)` });
+    score -= 15;
+  }
+
+  return { name: 'Cognitive Load', score: Math.max(0, score), weight: 0.03, issues };
 }
 
 // ============================================================
@@ -283,6 +386,12 @@ export function reviewUI(filePath: string, brandColor?: string): ReviewResult {
     checkEmptyState(code),
     checkResponsive(code),
     checkUX(code),
+    // NEW: Reference Learning categories
+    checkInformationArchitecture(code),
+    checkUXFlow(code),
+    checkPatternConsistency(code),
+    checkContentDensity(code),
+    checkCognitiveLoad(code),
   ];
 
   // 가중 평균

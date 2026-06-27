@@ -48,3 +48,8 @@ export interface PipelineResult {
   fixes: FixSuggestion[];
   productionReady: boolean;
 }
+
+// --- Extended Categories (Reference Learning) ---
+export interface ExtendedReviewResult extends ReviewResult {
+  extendedCategories: CategoryScore[];
+}

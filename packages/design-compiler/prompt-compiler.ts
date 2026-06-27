@@ -4,6 +4,7 @@
 // ============================================================
 
 import type { UIManifest } from './manifest';
+import { patternsToPromptText, referencesToPromptText } from '../design-learning';
 import * as crypto from 'crypto';
 
 // --- Prompt Layer (7-Layer) ---
@@ -324,6 +325,10 @@ export function compilePrompt(m: UIManifest, ai: string): CompiledPrompt {
     buildInteractionLayer(),
     buildComponentLayer(m),
     buildScreenLayer(m),
+    // NEW: Pattern Library (산업별 검증된 패턴)
+    patternsToPromptText(m.industry),
+    // NEW: Reference Principles (세계 최고 제품 원칙)
+    referencesToPromptText(),
     buildProhibitionLayer(),
     buildTechLayer(m),
   ];
