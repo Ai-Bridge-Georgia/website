@@ -8,6 +8,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleRead, handleCreate } from '@aibg/core/handler';
+import { ensureInitialized } from '../../../../lib/bootstrap';
+
+// Factory 초기화 (첫 API 호출 시 1회 실행)
+ensureInitialized();
 
 // --- GET /api/v1/[entity] → 목록 조회 ---
 export async function GET(

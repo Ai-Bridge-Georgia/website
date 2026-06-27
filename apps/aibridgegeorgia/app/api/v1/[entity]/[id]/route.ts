@@ -5,6 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleUpdate, handleDelete } from '@aibg/core/handler';
+import { ensureInitialized } from '../../../../../lib/bootstrap';
+
+ensureInitialized();
 
 // --- PATCH /api/v1/[entity]/[id] → 수정 ---
 export async function PATCH(
