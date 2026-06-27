@@ -41,6 +41,10 @@ export interface ProjectGenerator {
 
   // 8. 빌드 파일 (Makefile, scripts, CI config)
   generateBuildFiles(manifest: ProjectManifest): GeneratedFile[];
+
+  // 9. 플랫폼 전용 추가 파일 (Theme, Manifest, etc.) — Adaptive
+  generateTheme?(manifest: ProjectManifest): GeneratedFile[];
+  generateAndroidManifest?(manifest: ProjectManifest): GeneratedFile[];
 }
 
 // --- Project Manifest (Business Manifest 확장) ---

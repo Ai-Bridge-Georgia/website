@@ -28,7 +28,7 @@ export const iosProjectGenerator: ProjectGenerator = {
   generateNavigation(manifest, _adapter) {
     const appName = capitalize(manifest.projectName.replace(/[^a-zA-Z0-9]/g, ''));
     const tabs = manifest.screens.filter(s => s.type !== 'dashboard').slice(0, 3);
-    const tabViews = tabs.map(t => t.name).join('View(), ');
+    const tabViews = tabs.map(t => capitalize(t.name) + 'View()').join(', ');
 
     return [{
       path: appName + 'App.swift',
@@ -48,9 +48,9 @@ export const iosProjectGenerator: ProjectGenerator = {
         '    @State private var selectedTab = 0',
         '    var body: some View {',
         '        TabView(selection: $selectedTab) {',
-        '            ' + (tabs[0]?.name ?? 'Home') + 'View().tabItem { Label("' + (tabs[0]?.title ?? 'Home') + '", systemImage: "house") }.tag(0)',
-        '            ' + (tabs[1]?.name ?? 'Menu') + 'View().tabItem { Label("' + (tabs[1]?.title ?? 'Menu') + '", systemImage: "fork.knife") }.tag(1)',
-        '            ' + (tabs[2]?.name ?? 'Reserve') + 'View().tabItem { Label("' + (tabs[2]?.title ?? 'Reserve') + '", systemImage: "calendar") }.tag(2)',
+        '            ' + capitalize(tabs[0]?.name ?? 'Home') + 'View().tabItem { Label("' + (tabs[0]?.title ?? 'Home') + '", systemImage: "house") }.tag(0)',
+        '            ' + capitalize(tabs[1]?.name ?? 'Menu') + 'View().tabItem { Label("' + (tabs[1]?.title ?? 'Menu') + '", systemImage: "fork.knife") }.tag(1)',
+        '            ' + capitalize(tabs[2]?.name ?? 'Reserve') + 'View().tabItem { Label("' + (tabs[2]?.title ?? 'Reserve') + '", systemImage: "calendar") }.tag(2)',
         '        }',
         '    }',
         '}',
