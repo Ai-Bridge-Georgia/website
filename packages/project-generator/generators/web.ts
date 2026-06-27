@@ -7,6 +7,7 @@ import type { ProjectGenerator } from '../interface';
 import type { GeneratedFile, ProjectManifest, ScreenSpec } from '../interface';
 import type { PlatformAdapter } from '../../platform-adapters/interface';
 import { getArchetypeProfile } from '../../design-learning/archetypes';
+import { resolveBrand, brandToCssVars } from '../../design-learning/brand-identity';
 
 export const webProjectGenerator: ProjectGenerator = {
   platform: 'web',
@@ -386,21 +387,20 @@ export default function ${capitalize(screen.name)}Page() {
 // ============================================================
 
 function getGlobalsCss(manifest: ProjectManifest): string {
+  const { visual } = resolveBrand((manifest as any).brandKey);
+  const cssVars = brandToCssVars(visual);
   return `@import "tailwindcss";
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
-:root {
-  --font-sans: "${manifest.brand.font}", "Inter", sans-serif;
-  --color-accent: ${manifest.brand.primaryColor};
-}
+${cssVars}
 
 html { scroll-behavior: smooth; word-break: keep-all; overflow-wrap: break-word; }
-body { font-family: var(--font-sans); color: #111827; background: #FFFFFF; font-display: swap; -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+body { font-family: var(--font-family); color: var(--color-text); background: var(--color-bg); font-display: swap; -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 @keyframes skeleton-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .skeleton { animation: skeleton-pulse 2s ease-in-out infinite; }
-::selection { background: var(--color-accent); color: white; }
+::selection { background: var(--color-primary); color: white; }
 `;
 }
 

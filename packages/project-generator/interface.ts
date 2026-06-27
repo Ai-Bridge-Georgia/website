@@ -49,10 +49,11 @@ export interface ProjectGenerator {
 
 // --- Project Manifest (Business Manifest 확장) ---
 export interface ProjectManifest {
-  projectName: string;        // 'korean-kitchen'
-  displayName: string;        // '한국의 맛'
-  industry: string;           // 'restaurant'
-  platform: string;           // 'web' | 'android' | 'ios' | 'flutter'
+  projectName: string;
+  displayName: string;
+  industry: string;
+  platform: string;
+  brandKey?: string;           // 'premium-korean' | 'street-food' | 'luxury-fine-dining'
   screens: ScreenSpec[];
   brand: {
     name: string;
