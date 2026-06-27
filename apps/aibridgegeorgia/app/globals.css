@@ -1,3 +1,90 @@
 @import "tailwindcss";
 
-html { scroll-behavior: smooth; }
+/* ============================================================
+   Pretendard 폰트 — font-display: swap + 한국어 keep-all
+   ============================================================ */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+:root {
+  --font-sans: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --color-bg: #FFFFFF;
+  --color-surface: #F9FAFB;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-tertiary: #9CA3AF;
+  --color-border: #E5E7EB;
+  --color-accent: #111827;
+  --color-danger: #DC2626;
+  --color-success: #059669;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* 한국어 자연스러운 줄바꿈 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  /* FOIT 방지 — 폰트 로딩 중에도 텍스트 표시 */
+  font-display: swap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   Focus Ring — 키보드 접근성 (WCAG AA)
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Reduced Motion — 접근성 (prefers-reduced-motion)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Skeleton Loading — pulse animation
+   ============================================================ */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================
+   Scroll Reveal — IntersectionObserver 기반 fade-up
+   ============================================================ */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   Selection — 브랜드 일관성
+   ============================================================ */
+::selection {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+}
