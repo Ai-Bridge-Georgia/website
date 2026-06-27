@@ -6,6 +6,7 @@
 import type { ProjectGenerator } from '../interface';
 import type { GeneratedFile, ProjectManifest, ScreenSpec } from '../interface';
 import type { PlatformAdapter } from '../../platform-adapters/interface';
+import { getArchetypeProfile } from '../../design-learning/archetypes';
 
 export const webProjectGenerator: ProjectGenerator = {
   platform: 'web',
@@ -172,6 +173,10 @@ function generateScreen(screen: ScreenSpec, manifest: ProjectManifest, adapter: 
 }
 
 function generateLanding(screen: ScreenSpec, manifest: ProjectManifest): GeneratedFile {
+  const arch = getArchetypeProfile(manifest.industry);
+  const ctaVerb = arch.ctaVerb;
+  const listScreen = manifest.screens.find(s => s.type === 'list');
+  const formScreen = manifest.screens.find(s => s.type === 'form');
   const content = `"use client";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
@@ -184,8 +189,8 @@ export default function ${capitalize(screen.name)}Page() {
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">${manifest.displayName}</h1>
         <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto">${screen.title}</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="/menu" className="px-8 py-3.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition min-h-[44px] flex items-center">메뉴 보기</a>
-          <a href="/reserve" className="px-8 py-3.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition min-h-[44px] flex items-center">예약하기</a>
+          <a href="/${listScreen?.name ?? 'menu'}" className="px-8 py-3.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition min-h-[44px] flex items-center">${listScreen?.title ?? '탐색'} 보기</a>
+          <a href="/${formScreen?.name ?? 'reserve'}" className="px-8 py-3.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition min-h-[44px] flex items-center">${ctaVerb}</a>
         </div>
       </header>
       <footer className="py-8 bg-gray-50 text-center text-sm text-gray-400">
@@ -198,7 +203,10 @@ export default function ${capitalize(screen.name)}Page() {
   return { path: `app/${screen.name}/page.tsx`, content };
 }
 
-function generateListScreen(screen: ScreenSpec, _manifest: ProjectManifest, _adapter: PlatformAdapter): GeneratedFile {
+function generateListScreen(screen: ScreenSpec, manifest: ProjectManifest, _adapter: PlatformAdapter): GeneratedFile {
+  const arch = getArchetypeProfile(manifest.industry);
+  const placeholderIcon = arch.placeholderIcon;
+  const currencySymbol = arch.currencyDisplay === 'none' ? '' : (manifest.brand.language === 'ka' ? '₾' : '');
   const endpoint = screen.apiEndpoint ?? `/api/v1/${screen.name}`;
   const content = `"use client";
 import { Navigation } from "@/components/Navigation";
@@ -240,11 +248,11 @@ export default function ${capitalize(screen.name)}Page() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((item: any) => (
               <article key={item.id} className="rounded-xl border border-gray-100 overflow-hidden hover:border-gray-300 hover:shadow-md transition cursor-pointer">
-                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center text-5xl">🍽️</div>
+                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center text-5xl">${placeholderIcon}</div>
                 <div className="p-5">
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-lg">{item.name ?? item.title ?? 'Item'}</h3>
-                    {item.price && <span className="font-bold">{item.price} ₾</span>}
+                    {item.price && <span className="font-bold">{item.price}${currencySymbol}</span>}
                   </div>
                   {item.description && <p className="text-sm text-gray-500">{item.description}</p>}
                 </div>

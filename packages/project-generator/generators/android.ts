@@ -6,6 +6,7 @@
 import type { ProjectGenerator } from '../interface';
 import type { GeneratedFile, ProjectManifest, ScreenSpec } from '../interface';
 import type { PlatformAdapter } from '../../platform-adapters/interface';
+import { getArchetypeProfile } from '../../design-learning/archetypes';
 
 export const androidProjectGenerator: ProjectGenerator = {
   platform: 'android',
@@ -32,7 +33,17 @@ export const androidProjectGenerator: ProjectGenerator = {
   generateNavigation(manifest, _adapter) {
     const screens = manifest.screens.filter(s => s.type !== 'dashboard');
     const navRoutes = screens.map(s => `    composable("${s.name}") { ${capitalize(s.name)}Screen(navController) }`).join('\n');
-    const bottomItemFn = (s: ScreenSpec) => 'NavigationBarItem(selected = false, onClick = { navController.navigate("' + s.name + '") }, icon = { Icon(Icons.Default.' + (s.name === 'menu' ? 'RestaurantMenu' : 'Home') + ', contentDescription = "' + s.title + '") }, label = { Text("' + s.title + '") })';
+    const arch = getArchetypeProfile(manifest.industry);
+    const navIconMap: Record<string, string> = {
+      'consumer-app': manifest.screens.find(s => s.type === 'list')?.name === 'menu' ? 'RestaurantMenu' : 'Home',
+      'enterprise-dashboard': 'Dashboard',
+      'marketplace': 'ShoppingCart',
+      'cms-admin': 'Edit',
+      'realtime-platform': 'TrendingUp',
+      'mission-ngo': 'VolunteerActivism',
+    };
+    const defaultIcon = navIconMap[arch.archetype] ?? 'Home';
+    const bottomItemFn = (s: ScreenSpec) => 'NavigationBarItem(selected = false, onClick = { navController.navigate("' + s.name + '") }, icon = { Icon(Icons.Default.' + defaultIcon + ', contentDescription = "' + s.title + '") }, label = { Text("' + s.title + '") })';
     const bottomItems = screens.slice(0, 3).map(bottomItemFn).join('\n        ');
 
     const pkgPath = manifest.projectName.replace(/-/g, '_');
@@ -237,6 +248,8 @@ rootProject.name = "${manifest.displayName}"\ninclude(":app")\n`,
 function generateComposeScreen(screen: ScreenSpec, manifest: ProjectManifest, adapter: PlatformAdapter): GeneratedFile {
   const pkgName = `com.aibg.${manifest.projectName.replace(/-/g, '_')}`;
   const className = `${capitalize(screen.name)}Screen`;
+  const arch = getArchetypeProfile(manifest.industry);
+  const placeholderIcon = arch.placeholderIcon;
   const endpoint = manifest.api?.baseUrl
     ? `"${manifest.api.baseUrl}/${screen.name}"`
     : `"https://api.example.com/${screen.name}"`;
@@ -293,7 +306,7 @@ function generateComposeScreen(screen: ScreenSpec, manifest: ProjectManifest, ad
                         Card(Modifier.fillMaxWidth()) {
                             Column {
                                 Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                    Text("🍽️", Modifier.align(Alignment.Center), fontSize = 40.sp)
+                                    Text("${placeholderIcon}", Modifier.align(Alignment.Center), fontSize = 40.sp)
                                 }
                                 Column(Modifier.padding(16.dp)) {
                                     Text(item["name"]?.toString() ?: "Item", style = MaterialTheme.typography.titleMedium)
