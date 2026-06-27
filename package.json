@@ -18,7 +18,8 @@
     "enforce": "npx tsx packages/enforcement/test.ts",
     "design-compile": "npx tsx packages/design-compiler/cli.ts",
     "review-ui": "npx tsx packages/ui-pipeline/cli.ts",
-    "test-platforms": "npx tsx packages/platform-adapters/test.ts"
+    "test-platforms": "npx tsx packages/platform-adapters/test.ts",
+    "generate-project": "npx tsx packages/project-generator/cli.ts"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",
